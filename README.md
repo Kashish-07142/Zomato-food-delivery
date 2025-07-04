@@ -1,9 +1,5 @@
 # Zomato-food-delivery
 
-Based on your project files — including the DDL scripts, sample data inserts, and complex query functions — here’s a **project description** you can use or adapt for documentation or presentation:
-
----
-
 ### **Project Title: Food Delivery Database Management System**
 
 #### **Project Description:**
