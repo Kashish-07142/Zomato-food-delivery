@@ -1,0 +1,1005 @@
+QUERIES:-
+
+1. USE CASE - CUSTOMER:
+
+SEARCHING RESTAUANTS BASED ON FOOD ITEM:-
+
+a.CREATE OR REPLACE FUNCTION search_restaurant_by_food_item(
+    p_food_item_name VARCHAR,
+    p_customer_city VARCHAR
+)
+RETURNS TABLE (
+    Restaurant_ID VARCHAR,
+    Restaurant_Name VARCHAR,
+    Cuisine_Type VARCHAR,
+    City VARCHAR,
+    Street VARCHAR,
+    Contact_No VARCHAR,
+    Email VARCHAR,
+    Food_Item_Name VARCHAR
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        r.Restaurant_ID, 
+        r.Name AS Restaurant_Name, 
+        r.Type AS Cuisine_Type, 
+        r.City, 
+        r.Street, 
+        r.Contact_No, 
+        r.Email, 
+        m.Item_Name AS Food_Item_Name
+    FROM 
+        Restaurants r
+    JOIN 
+        Restaurant_Menu rm ON r.Restaurant_ID = rm.Restaurant_ID
+    JOIN 
+        Menu m ON rm.Item_ID = m.Item_ID
+    WHERE 
+        m.Item_Name ILIKE '%' || p_food_item_name || '%'
+        AND r.City = p_customer_city
+    ORDER BY
+        CASE WHEN r.Sponsored = 'Yes' THEN 0 ELSE 1 END,  
+        r.Name,  
+        m.Item_Name;  
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM search_restaurant_by_food_item('Mutton Biryani', 'Mumbai');
+
+
+
+SEARCHING RESTAUANTS BASED ON TYPE-VEG/NON-VEG:- 
+
+b.CREATE OR REPLACE FUNCTION search_restaurant_by_cuisine(
+    p_cuisine_type VARCHAR,
+    p_customer_city VARCHAR
+)
+RETURNS TABLE (
+    Restaurant_ID VARCHAR,
+    Restaurant_Name VARCHAR,
+    Cuisine_Type VARCHAR,
+    City VARCHAR,
+    Street VARCHAR,
+    Contact_No VARCHAR,
+    Email VARCHAR
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        r.Restaurant_ID, 
+        r.Name AS Restaurant_Name, 
+        r.Type AS Cuisine_Type, 
+        r.City, 
+        r.Street, 
+        r.Contact_No, 
+        r.Email
+    FROM 
+        Restaurants r
+    WHERE 
+        r.Type ILIKE '%' || p_cuisine_type || '%'
+        AND r.City = p_customer_city
+    ORDER BY
+        CASE WHEN r.Sponsored = 'Yes' THEN 0 ELSE 1 END,
+        r.Type;  
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM search_restaurant_by_cuisine('PureVeg', 'Delhi');
+
+
+SEARCHING RESTAUANTS BY NAME:-
+c. 
+CREATE OR REPLACE FUNCTION search_restaurant_by_name(
+    p_restaurant_name VARCHAR,
+    p_customer_city VARCHAR
+)
+RETURNS TABLE (
+    Restaurant_ID VARCHAR,
+    Restaurant_Name VARCHAR,
+    Cuisine_Type VARCHAR,
+    City VARCHAR,
+    Street VARCHAR,
+    Contact_No VARCHAR,
+    Email VARCHAR
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        r.Restaurant_ID, 
+        r.Name AS Restaurant_Name, 
+        r.Type AS Cuisine_Type, 
+        r.City, 
+        r.Street, 
+        r.Contact_No, 
+        r.Email
+    FROM 
+        Restaurants r
+    WHERE 
+        r.Name ILIKE '%' || p_restaurant_name || '%'
+        AND r.City = p_customer_city
+    ORDER BY
+        CASE WHEN r.Sponsored = 'Yes' THEN 0 ELSE 1 END,
+        r.Name;  
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM search_restaurant_by_name('Spicy Junction', 'Mumbai');
+
+
+SEARCHING MENU ITEMS FROM A RESTAURANT:-
+
+d. CREATE OR REPLACE FUNCTION sp_get_menu_items(p_restaurant_id VARCHAR(20))
+RETURNS TABLE(Item_ID VARCHAR(10), Item_Name CHAR(50), Price INT, Description CHAR(70)) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT M.Item_ID, M.Item_Name, M.Price, M.Description
+    FROM Menu M
+    JOIN Restaurant_Menu RM ON M.Item_ID = RM.Item_ID
+    WHERE RM.Restaurant_ID = p_restaurant_id;
+END;
+$$ LANGUAGE plpgsql;
+select * from sp_get_menu_items('R040')
+
+GETTING INFORMATION ABOUT ISSUES RAISED:-
+
+e. CREATE OR REPLACE FUNCTION sp_get_dispute_info(p_order_id VARCHAR(20))
+RETURNS TABLE(Issue_ID VARCHAR(10), Refund INT, Date DATE) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT d.Issue_ID, d.Refund, d.Date
+    FROM Disputes d
+    WHERE O_ID = p_order_id;
+END;
+$$ LANGUAGE plpgsql;
+
+select * from sp_get_dispute_info('ORD002')
+
+SEARCHING RESTAURANTS BASED ON AVAILABILITY- OPEN OR CLOSED:-
+
+f.CREATE OR REPLACE FUNCTION search_restaurant_by_status(
+    p_status VARCHAR,
+    p_customer_city VARCHAR
+)
+RETURNS TABLE (
+    Restaurant_ID VARCHAR,
+    Restaurant_Name VARCHAR,
+    Cuisine_Type VARCHAR,
+    City VARCHAR,
+    Street VARCHAR,
+    Contact_No VARCHAR,
+    Email VARCHAR,
+    Current_Status VARCHAR
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        r.Restaurant_ID,
+        r.Name AS Restaurant_Name,
+        r.Type AS Cuisine_Type,
+        r.City,
+        r.Street,
+        r.Contact_No,
+        r.Email,
+        r.Availability AS Current_Status
+    FROM 
+        Restaurants r
+    WHERE 
+        r.Availability = p_status
+        AND r.City = p_customer_city
+    ORDER BY
+        CASE WHEN r.Sponsored = 'Yes' THEN 0 ELSE 1 END,
+        r.Name; 
+END;
+$$ LANGUAGE plpgsql;
+
+
+SELECT * FROM search_restaurant_by_status('Open', 'Kolkata');
+
+
+SEARCHING RESTAURANTS BASED ON RATINGS
+
+g.CREATE OR REPLACE FUNCTION search_restaurant_by_minimum_rating(
+    p_minimum_rating INT,
+    p_customer_city VARCHAR
+)
+RETURNS TABLE (
+    Restaurant_ID VARCHAR,
+    Restaurant_Name VARCHAR,
+    Cuisine_Type VARCHAR,
+    City VARCHAR,
+    Street VARCHAR,
+    Contact_No VARCHAR,
+    Email VARCHAR,
+    Rating INT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        r.Restaurant_ID,
+        r.Name AS Restaurant_Name,
+        r.Type AS Cuisine_Type,
+        r.City,
+        r.Street,
+        r.Contact_No,
+        r.Email,
+        r.Ratings AS Rating
+    FROM 
+        Restaurants r
+    WHERE 
+        r.Ratings >= p_minimum_rating
+        AND r.City = p_customer_city
+    ORDER BY
+        r.Ratings DESC,
+        CASE WHEN r.Sponsored = 'Yes' THEN 0 ELSE 1 END, 
+        r.Name; 
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM search_restaurant_by_minimum_rating(4, 'Hyderabad');
+
+SEARCHING RESTAURANTS BASED ON DISCOUNTS OFFERED:-
+
+h.CREATE OR REPLACE FUNCTION get_restaurants_with_discounts(
+    p_customer_city VARCHAR
+)
+RETURNS TABLE (
+    Restaurant_ID VARCHAR,
+    Restaurant_Name VARCHAR,
+    Discount INT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT
+        r.Restaurant_ID,
+        r.Name AS Restaurant_Name,
+        MAX(rm.Discount) AS Discount
+    FROM 
+        Restaurants r
+    JOIN 
+        Restaurant_Menu rm ON r.Restaurant_ID = rm.Restaurant_ID
+    WHERE 
+        rm.Discount > 0
+        AND r.City = p_customer_city
+    GROUP BY 
+        r.Restaurant_ID, r.Name
+    ORDER BY 
+        r.Name;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * get_restaurants_with_discounts('Bengaluru');
+
+GETTING INFORMATION ABOUT CART ITEMS:-
+
+i.CREATE OR REPLACE FUNCTION get_cart_details(
+    p_cart_id VARCHAR
+)
+RETURNS TABLE (
+    Item_ID VARCHAR(10),
+    Item_Name CHAR(50),
+    Quantity INT,
+    Price INT,
+    Total_Price INT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        ci.Item_ID,
+        mi.Item_Name,
+        ci.Quantity,
+        mi.Price,
+        (ci.Quantity * mi.Price) AS Total_Price
+    FROM 
+        Cart_Items ci
+    JOIN 
+        Menu mi ON ci.Item_ID = mi.Item_ID
+    WHERE 
+        ci.Cart_ID = p_cart_id;
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM get_cart_details('CRT001');
+
+GETTING INFORMATION ABOUT CART TOTAL:-
+
+j.CREATE OR REPLACE FUNCTION _carttotal_(
+    p_cart_id VARCHAR
+)
+RETURNS TABLE(
+    Item_Name VARCHAR,
+    Restaurant_Name VARCHAR,
+    Quantity INT,
+    Item_Price INT,
+    Total_Price INT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        CAST(mi.Item_Name AS VARCHAR),  
+        CAST(r.Name AS VARCHAR),
+        ci.Quantity,
+        mi.Price AS Item_Price,
+        (ci.Quantity * mi.Price) AS Total_Price
+    FROM 
+        Cart_Items ci
+    JOIN 
+        Menu mi ON ci.Item_ID = mi.Item_ID
+    JOIN 
+        Restaurants r ON ci.Restaurant_ID = r.Restaurant_ID
+    WHERE 
+        ci.Cart_ID = p_cart_id;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT _carttotal_('CRT001');
+
+ADDING /SETTING DELIVERY LOCATION:-
+
+k. CREATE OR REPLACE FUNCTION set_delivery_location(
+    p_customer_id VARCHAR(10),
+    p_receiver_name VARCHAR(20),
+    p_receiver_contact VARCHAR(15),
+    p_pin INT,
+    p_city VARCHAR(20),
+    p_street VARCHAR(20)
+)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO Customer_Address (Receiver_Name, Receiver_Contact_Number, PIN, City, Street, Cu_ID)
+    VALUES (p_receiver_name, p_receiver_contact, p_pin, p_city, p_street, p_customer_id);
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT set_delivery_location(
+    'C005',          
+    'Neha Sarkar',           
+    '9123451110',      
+     400001,            
+    'Mumbai',          
+    'Colaba'           
+);
+
+l. Placing an order:-
+
+CREATE OR REPLACE FUNCTION place_order(
+    p_order_id VARCHAR
+)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE Orders
+    SET Status = 'Order Confirmed'
+    WHERE Order_ID = p_order_id;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT place_order('ORD005');
+
+m. Order invoice:-
+CREATE OR REPLACE FUNCTION get_order_invoice(
+    p_order_id VARCHAR
+)
+RETURNS TABLE (
+    Transaction_ID VARCHAR(20),
+    Payment_Method CHAR(20),
+    Inv_Date DATE,
+    Time TIME
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        i.Transaction_ID, 
+        i.Payment_Method, 
+        i.Inv_Date, 
+        i.Time
+    FROM Invoice i
+    WHERE i.OID = p_order_id;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM get_order_invoice('ORD001');
+
+n. Premium subscription invoice:-
+
+CREATE OR REPLACE FUNCTION _premium_invoice(
+    p_premium_id VARCHAR
+)
+RETURNS TABLE (
+    Transaction_ID VARCHAR(20),
+    Payment_Method CHAR(20),
+    Inv_Date DATE,
+    Inv_Time TIME, 
+    Amount INT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        i.Transaction_ID,
+        i.Payment_Method,
+        i.Inv_Date,
+        i.Time,
+        p.Amount
+    FROM Invoice i
+    JOIN Premium p ON i.Prem_ID = p.ID
+    WHERE i.Prem_ID = p_premium_id
+    AND i.Prem_ID IS NOT NULL; 
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM _premium_invoice('P001');
+
+o. Rate delivery partner:-
+CREATE OR REPLACE FUNCTION rate_deliverypartner(
+    partner_id VARCHAR,
+    rating INT
+)
+RETURNS VOID AS
+$$
+DECLARE
+    current_rating INT;
+BEGIN
+    IF rating < 1 OR rating > 5 THEN
+        RAISE EXCEPTION 'Rating must be between 1 and 5';
+    END IF;
+    SELECT dp.Ratings INTO current_rating
+    FROM Delivery_Partner dp
+    WHERE dp.Partner_ID = rate_deliverypartner.partner_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Delivery Partner not found with Partner_ID = %', partner_id;
+    END IF;
+    UPDATE Delivery_Partner dp
+    SET Ratings = (COALESCE(dp.Ratings, 0) + rating) / 2
+    WHERE dp.Partner_ID = rate_deliverypartner.partner_id;
+END;
+$$ LANGUAGE plpgsql;
+SELECT rate_deliverypartner('DP001', 4);
+
+2. USE CASE - RESTAURANTS:
+
+GETTING INFORMATION ABOUT ORDERS YET TO BE HANDED OVER TO DELIVERY PARTNER:-
+
+a. CREATE OR REPLACE FUNCTION get_active_orders_for_restaurant(
+    p_restaurant_id VARCHAR(20)
+)
+RETURNS TABLE(Order_ID VARCHAR(20), Customer_ID VARCHAR(10), Status CHAR(20), Order_Date DATE, Total_Value NUMERIC) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.Order_ID,
+        o.Cust_ID,
+        o.Status,
+        o.Date,
+        SUM(mi.Price * ci.Quantity)::numeric AS Total_Value
+    FROM 
+        Orders o
+    JOIN 
+        Cart c ON o.Cart_ID = c.Cart_ID
+    JOIN 
+        Cart_Items ci ON c.Cart_ID = ci.Cart_ID
+    JOIN 
+        Menu mi ON ci.Item_ID = mi.Item_ID
+    WHERE 
+        c.Restaurant_ID = p_restaurant_id
+        AND o.Status = 'Order Confirmed'
+    GROUP BY 
+        o.Order_ID, o.Cust_ID, o.Status, o.Date;
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM get_active_orders_for_restaurant('R005');
+
+GETTING DETAILS ABOUT RATINGS
+
+b. CREATE OR REPLACE FUNCTION restaurant_performance(
+    p_restaurant_id VARCHAR(20)
+)
+RETURNS TABLE(Order_ID VARCHAR(20), Total_Orders INT, Total_Value INT, Restaurant_Ratings INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.Order_ID, 
+        COUNT(o.Order_ID)::integer AS Total_Orders,
+        SUM(mi.Price * ci.Quantity)::integer AS Total_Value,
+        r.Ratings AS Restaurant_Ratings
+    FROM 
+        Orders o
+    JOIN 
+        Cart c ON o.Cart_ID = c.Cart_ID
+    JOIN 
+        Cart_Items ci ON c.Cart_ID = ci.Cart_ID
+    JOIN 
+        Menu mi ON ci.Item_ID = mi.Item_ID
+    JOIN 
+        Restaurants r ON c.Restaurant_ID = r.Restaurant_ID
+    WHERE 
+        c.Restaurant_ID = p_restaurant_id
+    GROUP BY 
+        o.Order_ID, r.Ratings;
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM restaurant_performance('R005');
+
+GETTING INFORMATION ABOUT ORDER PLACED BY A CUSTOMER:-
+
+c. CREATE OR REPLACE FUNCTION get_customer_orders_for_restaurant(
+    p_customer_id VARCHAR(10),
+    p_restaurant_id VARCHAR(20)
+)
+RETURNS TABLE(Order_ID VARCHAR(20), Order_Date DATE, Total_Amount NUMERIC) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.Order_ID,
+        o.Date AS Order_Date,
+        SUM(mi.Price * ci.Quantity)::numeric AS Total_Amount
+   
+    FROM 
+        Orders o
+    JOIN 
+        Cart c ON o.Cart_ID = c.Cart_ID
+    JOIN 
+        Cart_Items ci ON c.Cart_ID = ci.Cart_ID
+    JOIN 
+        Menu mi ON ci.Item_ID = mi.Item_ID
+    WHERE 
+        c.Cust_ID = p_customer_id
+    AND 
+        c.Restaurant_ID = p_restaurant_id
+    GROUP BY 
+        o.Order_ID, o.Date;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM get_customer_orders_for_restaurant('C005','R040');
+
+CANCELLED ORDERS:-
+
+d.CREATE OR REPLACE FUNCTION get_cancelled_orders_by_customers(
+    p_restaurant_id VARCHAR(20)
+)
+RETURNS TABLE (
+    Order_ID VARCHAR(20),
+    Customer_ID VARCHAR(10),
+    Customer_Name CHAR(20),
+    Date DATE,
+    Status CHAR(20)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.Order_ID,
+        c.Customer_ID,
+        c.Name AS Customer_Name,
+        o.Date,
+        o.Status
+    FROM 
+        Orders o
+    JOIN 
+        Cart ca ON o.Cart_ID = ca.Cart_ID
+    JOIN 
+        Customer c ON o.Cust_ID = c.Customer_ID
+    WHERE 
+        ca.Restaurant_ID = p_restaurant_id
+        AND o.Status = 'Cancelled';  
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM get_cancelled_orders_by_customers('R002');
+
+CUSTOMERS WHO HAVE RATED POORLY:-
+
+e.CREATE OR REPLACE FUNCTION get_customers_with_poor_ratings(
+    p_restaurant_id VARCHAR(20),
+    p_rating_threshold INT DEFAULT 2
+)
+RETURNS TABLE (
+    Customer_ID VARCHAR(10),
+    Customer_Name CHAR(20),
+    Order_ID VARCHAR(20),
+    Rating INT,
+    Date DATE
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        c.Customer_ID,
+        c.Name AS Customer_Name,
+        o.Order_ID,
+        o.Rating,
+        o.Date
+    FROM 
+        Orders o
+    JOIN 
+        Cart ca ON o.Cart_ID = ca.Cart_ID
+    JOIN 
+        Customer c ON o.Cust_ID = c.Customer_ID
+    WHERE 
+        ca.Restaurant_ID = p_restaurant_id
+        AND o.Rating < p_rating_threshold;
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM get_customers_with_poor_ratings('R010');
+
+f. Add menu item:-
+
+CREATE OR REPLACE FUNCTION add_menu_item(
+    p_restaurant_id VARCHAR(20),
+    p_item_id VARCHAR(20),
+    p_discount INT
+)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO Restaurant_Menu (Restaurant_ID, Item_ID, Discount)
+    VALUES (p_restaurant_id, p_item_id, p_discount)
+    ON CONFLICT (Restaurant_ID, Item_ID)
+    DO UPDATE SET Discount = EXCLUDED.Discount;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT add_menu_item('R001', 'I101', 0);
+
+
+3. USE CASE - DELIVERY PARTNER:
+
+RATINGS:-
+
+a.CREATE OR REPLACE FUNCTION get_delivery_partner_performance(p_partner_id VARCHAR(10))
+RETURNS TABLE(Average_Rating NUMERIC, Total_Deliveries INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        AVG(dp.Ratings)::NUMERIC AS Average_Rating,
+        COUNT(o.Order_ID)::INT AS Total_Deliveries 
+    FROM 
+        Delivery_Partner dp
+    JOIN 
+        Orders o ON dp.OrderID = o.Order_ID
+    WHERE 
+        dp.Partner_ID = p_partner_id
+        AND o.Status = 'Delivered'
+    GROUP BY 
+        dp.Partner_ID;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM get_delivery_partner_performance('DP001');
+
+DELIVERY HISTORY:-
+b. CREATE OR REPLACE FUNCTION get_delivery_history(p_partner_id VARCHAR(10))
+RETURNS TABLE(Order_ID VARCHAR(20), Order_Date DATE, Total_Value NUMERIC, Rating INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        o.Order_ID,
+        o.Date,
+        SUM(mi.Price * ci.Quantity)::numeric AS Total_Value,
+        dp.Ratings
+    FROM 
+        Delivery_Partner dp
+    JOIN 
+        Orders o ON dp.OrderID = o.Order_ID
+    JOIN 
+        Cart c ON o.Cart_ID = c.Cart_ID
+    JOIN 
+        Cart_Items ci ON c.Cart_ID = ci.Cart_ID
+    JOIN 
+        Menu mi ON ci.Item_ID = mi.Item_ID
+    WHERE 
+        dp.Partner_ID = p_partner_id
+        AND o.Status = 'Delivered'
+    GROUP BY 
+        o.Order_ID, o.Date, dp.Ratings
+    ORDER BY 
+        o.Date DESC;
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM get_delivery_history('DP001');
+
+REVENUE FOR A PARTICULAR ORDER:-
+
+c. CREATE OR REPLACE FUNCTION calculate_delivery_partner_revenue(
+    p_order_id VARCHAR
+)
+RETURNS TABLE (
+    Partner_ID VARCHAR,
+    Partner_Name CHAR(20),
+    Order_ID VARCHAR,
+    Order_Total NUMERIC,
+    Revenue NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        dp.Partner_ID,
+        dp.Name AS Partner_Name,
+        o.Order_ID,
+        SUM(ci.Quantity * mi.Price)::NUMERIC AS Order_Total,
+        (SUM(ci.Quantity * mi.Price)::NUMERIC * 1.5 * dp.Rating)::NUMERIC AS Revenue
+    FROM 
+        Delivery_Partner dp
+    JOIN Orders o ON dp.OrderID = o.Order_ID
+    JOIN Cart_Items ci ON o.Cart_ID = ci.Cart_ID
+    JOIN Menu mi ON ci.Item_ID = mi.Item_ID
+    WHERE 
+        o.Order_ID = p_order_id
+    GROUP BY 
+        dp.Partner_ID, dp.Name, o.Order_ID, dp.Rating;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM calculate_delivery_partner_revenue('ORD001');
+
+
+
+4. USE CASE - ADMIN:
+
+CUSTOMERS WITH PREMIUM SUBSCRIPTION:-
+
+a. CREATE OR REPLACE FUNCTION sp_get_premium_customers()
+RETURNS TABLE(Customer_ID VARCHAR(10), Name CHAR(20), Start_Date DATE, End_Date DATE, Amount INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT C.Customer_ID, C.Name, P.Start_Date, P.End_Date, P.Amount
+    FROM Customer C
+    JOIN Premium P ON C.Customer_ID = P.C_ID
+    WHERE CURRENT_DATE BETWEEN P.Start_Date AND P.End_Date;
+END;
+$$ LANGUAGE plpgsql;
+
+
+SELECT * FROM sp_get_premium_customers();
+
+CUSTOMER PROFILES:-
+
+b. CREATE OR REPLACE FUNCTION sp_get_customer_profile(p_customer_id VARCHAR(10))
+RETURNS TABLE(Customer_ID VARCHAR(10), Name CHAR(20), Phone_Number VARCHAR(15), Email VARCHAR(20), Device_Count INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        c.Customer_ID, 
+        c.Name, 
+        c.Phone_Number, 
+        c.Email, 
+        c.Device_Count
+    FROM 
+        Customer c
+    WHERE 
+        c.Customer_ID = p_customer_id;
+END;
+$$ LANGUAGE plpgsql;
+
+select * from sp_get_customer_profile('C030')
+
+NEW CUSTOMERS FOR A PARTICULAR MONTH:-
+
+c. CREATE OR REPLACE FUNCTION monthly_new_customers_and_order_value(input_date DATE)
+RETURNS TABLE(Month DATE, New_Customers INT, Total_Order_Value NUMERIC) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        DATE_TRUNC('month', o.Date)::DATE AS Month,
+        COUNT(DISTINCT c.Customer_ID)::INT AS New_Customers,
+        COALESCE(SUM(m.Price * ci.Quantity)::NUMERIC, 0) AS Total_Order_Value
+    FROM 
+        Orders o
+    JOIN 
+        Customer c ON o.Cust_ID = c.Customer_ID
+    JOIN 
+        Cart ca ON o.Cart_ID = ca.Cart_ID
+    JOIN 
+        Cart_Items ci ON ca.Cart_ID = ci.Cart_ID
+    JOIN 
+        Menu m ON ci.Item_ID = m.Item_ID
+    WHERE 
+        o.Date >= input_date - INTERVAL '1 year'
+        AND o.Date < input_date 
+        AND c.Date_of_Registration <= o.Date 
+    GROUP BY 
+        Month
+    ORDER BY 
+        Month;
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM monthly_new_customers_and_order_value('2024-12-01');
+
+TOTAL ORDERS IN A MONTH:-
+
+d. CREATE OR REPLACE FUNCTION get_total_orders_for_month(p_month DATE)
+RETURNS TABLE(Month DATE, Total_Orders INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        DATE_TRUNC('month', o.Date)::DATE AS Month,
+        COUNT(o.Order_ID)::INTEGER AS Total_Orders 
+    FROM 
+        Orders o
+    WHERE 
+        DATE_TRUNC('month', o.Date) = DATE_TRUNC('month', p_month)
+    GROUP BY 
+        Month;
+END;
+$$ LANGUAGE plpgsql;
+
+select * from get_total_orders_for_month('2024-10-01');
+
+HIGHEST RATED RESTAURANTS:-
+
+e. CREATE OR REPLACE FUNCTION get_highest_rated_restaurant()
+RETURNS TABLE(Restaurant_ID VARCHAR(20), Name CHAR(40), City CHAR(30), Ratings INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        r.Restaurant_ID, 
+        r.Name, 
+        r.City, 
+        r.Ratings
+    FROM 
+        Restaurants r
+    ORDER BY 
+        r.Ratings DESC
+    LIMIT 5;
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM get_highest_rated_restaurant();
+
+LOWEST RATED RESTAURANTS:-
+f. CREATE OR REPLACE FUNCTION get_lowest_rated_restaurant()
+RETURNS TABLE(Restaurant_ID VARCHAR(20), Name CHAR(40), City CHAR(30), Ratings INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        r.Restaurant_ID, 
+        r.Name, 
+        r.City, 
+        r.Ratings
+    FROM 
+        Restaurants r
+    ORDER BY 
+        r.Ratings ASC
+    LIMIT 5;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM get_lowest_rated_restaurant();
+
+CUSTOMERS WITH MOST ORDERS:-
+
+g. CREATE OR REPLACE FUNCTION customers_with_most_orders()
+RETURNS TABLE (
+    Customer_ID VARCHAR,
+    Customer_Name CHAR(20),
+    Total_Orders INT,
+    Total_Amount NUMERIC,
+    Restaurant_Name CHAR(40)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        c.Customer_ID,
+        c.Name AS Customer_Name,
+        COUNT(o.Order_ID)::INT AS Total_Orders,
+        SUM((mi.Price * ci.Quantity)::NUMERIC) AS Total_Amount,
+        r.Name AS Restaurant_Name
+    FROM
+        Customer c
+    JOIN Orders o ON c.Customer_ID = o.Cust_ID
+    JOIN Cart_Items ci ON o.Cart_ID = ci.Cart_ID
+    JOIN Menu mi ON ci.Item_ID = mi.Item_ID
+    JOIN Restaurants r ON ci.Restaurant_ID = r.Restaurant_ID
+    WHERE o.Status = 'Delivered'
+    GROUP BY c.Customer_ID, c.Name, r.Name
+    ORDER BY Total_Orders DESC, Total_Amount DESC
+    LIMIT 3;
+END;
+$$ LANGUAGE plpgsql;
+
+
+SELECT * FROM customers_with_most_orders();
+
+
+CUSTOMERS WITH LEAST ORDERS:-
+
+h.CREATE OR REPLACE FUNCTION customers_with_least_orders()
+RETURNS TABLE (
+    Customer_ID VARCHAR,
+    Customer_Name CHAR(20),
+    Total_Orders INT,
+    Total_Amount NUMERIC,
+    Restaurant_Name CHAR(40)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        c.Customer_ID,
+        c.Name AS Customer_Name,
+        COUNT(o.Order_ID)::INT AS Total_Orders,
+        SUM((mi.Price * ci.Quantity)::NUMERIC) AS Total_Amount,
+        r.Name AS Restaurant_Name
+    FROM
+        Customer c
+    JOIN Orders o ON c.Customer_ID = o.Cust_ID
+    JOIN Cart_Items ci ON o.Cart_ID = ci.Cart_ID
+    JOIN Menu mi ON ci.Item_ID = mi.Item_ID
+    JOIN Restaurants r ON ci.Restaurant_ID = r.Restaurant_ID
+    WHERE o.Status = 'Delivered' 
+    GROUP BY c.Customer_ID, c.Name, r.Name
+    ORDER BY Total_Orders ASC, Total_Amount ASC
+    LIMIT 3;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM customers_with_least_orders();
+
+i. Most ordered per course:-
+
+CREATE OR REPLACE FUNCTION most_ordered_items_in_each_course_()
+RETURNS TABLE (
+    Course VARCHAR,
+    Item_Name CHAR(50),
+    Total_Orders INT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT ON (m.Course)
+        m.Course::VARCHAR,
+        m.Item_Name,
+        SUM(ci.Quantity)::INT AS Total_Orders 
+    FROM
+        Menu m
+    JOIN Cart_Items ci ON m.Item_ID = ci.Item_ID
+    GROUP BY
+        m.Course, m.Item_Name
+    ORDER BY
+        m.Course, Total_Orders DESC;
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM most_ordered_items_in_each_course_();
+
+j. Customers without active premium subscription:-
+
+CREATE OR REPLACE FUNCTION sp_get_customers_without_premium()
+RETURNS TABLE (
+    Customer_ID VARCHAR(10),
+    Name CHAR(20),
+    Start_Date DATE,
+    End_Date DATE,
+    Amount INT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        C.Customer_ID,
+        C.Name,
+        P.Start_Date,
+        P.End_Date,
+        P.Amount
+    FROM
+        Customer C
+    LEFT JOIN Premium P ON C.Customer_ID = P.C_ID
+    WHERE
+        NOT (CURRENT_DATE BETWEEN P.Start_Date AND P.End_Date);
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT * FROM sp_get_customers_without_premium();
+
+k. Pending Issues:-
+
+CREATE OR REPLACE FUNCTION sp_get_pending_disputes()
+RETURNS TABLE (
+    Issue_ID VARCHAR(10),
+    Order_ID VARCHAR(20)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        D.Issue_ID, 
+        D.O_ID AS Order_ID 
+    FROM
+        Disputes D
+    WHERE
+        D.Refund IS NULL
+        OR D.Date IS NULL;
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM sp_get_pending_disputes();
+
+
+
